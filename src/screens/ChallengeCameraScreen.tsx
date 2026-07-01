@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
-  Alert,
+  Linking,
+  Platform,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useNavigation } from '@react-navigation/native';
@@ -14,7 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useStore } from '@/store';
 import { verifyBathroomItem } from '@/services/verification';
-import { COLORS } from '@/constants';
+import { COLORS, RADIUS } from '@/constants';
 import { RootStackParamList } from '@/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -27,6 +28,15 @@ export function ChallengeCameraScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [verifying, setVerifying] = useState(false);
   const [attemptFeedback, setAttemptFeedback] = useState<string | null>(null);
+  const [shutterPressed, setShutterPressed] = useState(false);
+
+  // Auto-clear stale feedback after a few seconds so the HUD doesn't stay
+  // cluttered with an old failed attempt forever.
+  useEffect(() => {
+    if (!attemptFeedback) return;
+    const t = setTimeout(() => setAttemptFeedback(null), 6000);
+    return () => clearTimeout(t);
+  }, [attemptFeedback]);
 
   const handleCapture = useCallback(async () => {
     if (!cameraRef.current || !activeSession || verifying) return;
@@ -35,7 +45,6 @@ export function ChallengeCameraScreen() {
     setAttemptFeedback(null);
 
     try {
-      // Take photo — camera-only, no gallery access (anti-cheat)
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.6,
         base64: false,
@@ -44,7 +53,6 @@ export function ChallengeCameraScreen() {
 
       if (!photo?.uri) throw new Error('No photo captured');
 
-      // Resize to 640px wide before sending to Roboflow (saves bandwidth, YOLO prefers 640)
       const resized = await ImageManipulator.manipulateAsync(
         photo.uri,
         [{ resize: { width: 640 } }],
@@ -53,7 +61,6 @@ export function ChallengeCameraScreen() {
 
       if (!resized.base64) throw new Error('Base64 encoding failed');
 
-      // Send to Roboflow YOLO model
       const result = await verifyBathroomItem(resized.base64, activeSession.item);
 
       if (result.success) {
@@ -65,7 +72,7 @@ export function ChallengeCameraScreen() {
       }
     } catch (err) {
       console.error('Capture error:', err);
-      setAttemptFeedback('Something went wrong. Try again.');
+      setAttemptFeedback("Couldn't process that photo. Try again.");
       setVerifying(false);
     }
   }, [activeSession, verifying, completeChallenge, navigation]);
@@ -80,15 +87,40 @@ export function ChallengeCameraScreen() {
   }
 
   if (!permission.granted) {
+    const canAskAgain = permission.canAskAgain;
     return (
       <SafeAreaView style={styles.permissionScreen}>
-        <Text style={styles.permissionEmoji}>📷</Text>
+        <View style={styles.permissionIconWrap}>
+          <Text style={styles.permissionEmoji}>📷</Text>
+        </View>
         <Text style={styles.permissionTitle}>Camera access needed</Text>
         <Text style={styles.permissionDesc}>
-          GetUp needs camera access to verify your bathroom challenge. No photos are stored.
+          GetUp needs your camera to verify the Bathroom Roulette challenge. Photos are checked
+          on-device for the item and never saved or shared.
         </Text>
-        <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
-          <Text style={styles.permissionBtnText}>Allow Camera</Text>
+
+        {canAskAgain ? (
+          <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission} activeOpacity={0.85}>
+            <Text style={styles.permissionBtnText}>Allow Camera</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.permissionBtn}
+            onPress={() =>
+              Platform.OS === 'ios' ? Linking.openURL('app-settings:') : Linking.openSettings()
+            }
+            activeOpacity={0.85}
+          >
+            <Text style={styles.permissionBtnText}>Open Settings</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.permissionBack}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.permissionBackText}>Go back</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -98,13 +130,7 @@ export function ChallengeCameraScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Live camera view — rear camera for anti-cheat */}
-      <CameraView
-        ref={cameraRef}
-        style={styles.camera}
-        facing="back"
-      >
-        {/* Target overlay */}
+      <CameraView ref={cameraRef} style={styles.camera} facing="back">
         <SafeAreaView style={styles.overlay}>
           {/* Top HUD */}
           <View style={styles.hud}>
@@ -122,7 +148,9 @@ export function ChallengeCameraScreen() {
               <View style={[styles.corner, styles.cornerBL]} />
               <View style={[styles.corner, styles.cornerBR]} />
             </View>
-            <Text style={styles.frameHint}>Point at the {activeSession.itemLabel.toLowerCase()}</Text>
+            <Text style={styles.frameHint}>
+              Point at the {activeSession.itemLabel.toLowerCase()} and hold steady
+            </Text>
           </View>
 
           {/* Bottom controls */}
@@ -136,13 +164,25 @@ export function ChallengeCameraScreen() {
             {verifying ? (
               <View style={styles.verifyingWrap}>
                 <ActivityIndicator color={COLORS.primary} size="large" />
-                <Text style={styles.verifyingText}>Scanning with YOLO...</Text>
+                <Text style={styles.verifyingText}>Checking your photo...</Text>
               </View>
             ) : (
-              <TouchableOpacity style={styles.shutterWrap} onPress={handleCapture} activeOpacity={0.85}>
-                <View style={styles.shutterRing}>
-                  <View style={styles.shutterBtn} />
+              <TouchableOpacity
+                style={styles.shutterWrap}
+                onPress={handleCapture}
+                onPressIn={() => setShutterPressed(true)}
+                onPressOut={() => setShutterPressed(false)}
+                activeOpacity={0.85}
+              >
+                <View style={[styles.shutterRing, shutterPressed && styles.shutterRingPressed]}>
+                  <View style={[styles.shutterBtn, shutterPressed && styles.shutterBtnPressed]} />
                 </View>
+              </TouchableOpacity>
+            )}
+
+            {!verifying && (
+              <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Text style={styles.cancelLink}>Cancel</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -150,11 +190,6 @@ export function ChallengeCameraScreen() {
       </CameraView>
     </View>
   );
-}
-
-// Corner frame helper
-function Corner({ style }: { style: object }) {
-  return <View style={style} />;
 }
 
 const CORNER_SIZE = 28;
@@ -167,14 +202,13 @@ const styles = StyleSheet.create({
   overlay: { flex: 1 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.bg },
 
-  // HUD
   hud: { alignItems: 'center', paddingTop: 16 },
   targetBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 20,
+    borderRadius: RADIUS.pill,
     paddingVertical: 10,
     paddingHorizontal: 18,
     borderWidth: 1,
@@ -183,7 +217,6 @@ const styles = StyleSheet.create({
   targetEmoji: { fontSize: 20 },
   targetLabel: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
-  // Scan frame
   frameWrap: {
     flex: 1,
     alignItems: 'center',
@@ -206,17 +239,16 @@ const styles = StyleSheet.create({
   cornerBR: { bottom: 0, right: 0, borderBottomWidth: CORNER_WIDTH, borderRightWidth: CORNER_WIDTH, borderBottomRightRadius: 6 },
   frameHint: { color: 'rgba(255,255,255,0.7)', fontSize: 13, textAlign: 'center' },
 
-  // Controls
-  controls: { paddingBottom: 48, alignItems: 'center', gap: 20 },
+  controls: { paddingBottom: 36, alignItems: 'center', gap: 16 },
   feedbackBanner: {
-    backgroundColor: 'rgba(239,68,68,0.85)',
-    borderRadius: 12,
+    backgroundColor: 'rgba(239,68,68,0.9)',
+    borderRadius: RADIUS.sm,
     paddingVertical: 10,
     paddingHorizontal: 20,
     marginHorizontal: 32,
   },
   feedbackText: { color: '#fff', fontSize: 14, fontWeight: '600', textAlign: 'center' },
-  verifyingWrap: { alignItems: 'center', gap: 12 },
+  verifyingWrap: { alignItems: 'center', gap: 12, paddingVertical: 14 },
   verifyingText: { color: '#fff', fontSize: 14, fontWeight: '600' },
   shutterWrap: { alignItems: 'center', justifyContent: 'center' },
   shutterRing: {
@@ -228,31 +260,55 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  shutterRingPressed: {
+    borderColor: COLORS.primary,
+  },
   shutterBtn: {
     width: 62,
     height: 62,
     borderRadius: 31,
     backgroundColor: '#fff',
   },
+  shutterBtnPressed: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: COLORS.primary,
+  },
+  cancelLink: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 
-  // Permissions
   permissionScreen: {
     flex: 1,
     backgroundColor: COLORS.bg,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
-    gap: 12,
+    gap: 10,
   },
-  permissionEmoji: { fontSize: 56 },
+  permissionIconWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: COLORS.primaryDim,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  permissionEmoji: { fontSize: 44 },
   permissionTitle: { fontSize: 22, fontWeight: '800', color: COLORS.textPrimary, textAlign: 'center' },
-  permissionDesc: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22 },
+  permissionDesc: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22, maxWidth: 300 },
   permissionBtn: {
     marginTop: 16,
     backgroundColor: COLORS.primary,
-    borderRadius: 14,
+    borderRadius: RADIUS.md,
     paddingVertical: 14,
     paddingHorizontal: 32,
   },
   permissionBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  permissionBack: { marginTop: 4, padding: 8 },
+  permissionBackText: { color: COLORS.textMuted, fontSize: 14, fontWeight: '600' },
 });

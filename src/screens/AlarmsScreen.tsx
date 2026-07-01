@@ -12,8 +12,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useStore } from '@/store';
 import { AlarmCard } from '@/components/AlarmCard';
-import { EmptyState } from '@/components/UI';
-import { COLORS } from '@/constants';
+import { EmptyState, ScreenHeader } from '@/components/UI';
+import { COLORS, RADIUS, SPACING } from '@/constants';
 import { RootStackParamList } from '@/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -23,39 +23,41 @@ export function AlarmsScreen() {
   const { alarms } = useStore();
 
   const sorted = [...alarms].sort((a, b) => a.time.localeCompare(b.time));
+  const activeCount = sorted.filter((a) => a.enabled).length;
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.appName}>GetUp</Text>
-          <Text style={styles.tagline}>Turn waking up into a mission</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => navigation.navigate('AlarmEditor', {})}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={['#FF7A40', '#FF5F1F']}
-            style={styles.addBtnGradient}
+      <ScreenHeader
+        title="GetUp"
+        subtitle="Turn waking up into a mission"
+        right={
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => navigation.navigate('AlarmEditor', {})}
+            activeOpacity={0.8}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
-            <Text style={styles.addBtnText}>+</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
+            <LinearGradient colors={['#FF7A40', '#FF5F1F']} style={styles.addBtnGradient}>
+              <Text style={styles.addBtnText}>+</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        }
+      />
 
       {sorted.length === 0 ? (
         <EmptyState
           emoji="⏰"
           title="No alarms yet"
-          subtitle="Set your first alarm and complete a Bathroom Roulette challenge to stop it."
+          subtitle="Set your first alarm, then complete a Bathroom Roulette challenge each morning to stop it."
           action={
             <TouchableOpacity
-              style={styles.emptyAddBtn}
+              style={styles.emptyAddBtnWrap}
               onPress={() => navigation.navigate('AlarmEditor', {})}
+              activeOpacity={0.85}
             >
-              <Text style={styles.emptyAddText}>Set an alarm</Text>
+              <LinearGradient colors={['#FF7A40', '#FF5F1F']} style={styles.emptyAddBtn}>
+                <Text style={styles.emptyAddText}>Set your first alarm</Text>
+              </LinearGradient>
             </TouchableOpacity>
           }
         />
@@ -65,7 +67,7 @@ export function AlarmsScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.sectionLabel}>
-            {sorted.filter((a) => a.enabled).length} active alarm{sorted.filter((a) => a.enabled).length !== 1 ? 's' : ''}
+            {activeCount} active alarm{activeCount !== 1 ? 's' : ''}
           </Text>
           {sorted.map((alarm) => (
             <AlarmCard
@@ -86,27 +88,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.bg,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 16,
-  },
-  appName: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: COLORS.textPrimary,
-    letterSpacing: -0.5,
-  },
-  tagline: {
-    fontSize: 13,
-    color: COLORS.textMuted,
-    marginTop: 2,
-  },
   addBtn: {
-    borderRadius: 18,
+    borderRadius: RADIUS.lg,
     overflow: 'hidden',
   },
   addBtnGradient: {
@@ -114,7 +97,7 @@ const styles = StyleSheet.create({
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 18,
+    borderRadius: RADIUS.lg,
   },
   addBtnText: {
     fontSize: 28,
@@ -123,8 +106,8 @@ const styles = StyleSheet.create({
     lineHeight: 32,
   },
   list: {
-    paddingHorizontal: 24,
-    gap: 12,
+    paddingHorizontal: SPACING.xxl,
+    gap: SPACING.md,
   },
   sectionLabel: {
     fontSize: 11,
@@ -137,11 +120,15 @@ const styles = StyleSheet.create({
   spacer: {
     height: 100,
   },
+  emptyAddBtnWrap: {
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    minWidth: 220,
+  },
   emptyAddBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderRadius: RADIUS.md,
   },
   emptyAddText: {
     color: '#fff',

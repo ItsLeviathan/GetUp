@@ -1,16 +1,17 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  SafeAreaView,
-} from 'react-native';
+import { View, Text, FlatList, StyleSheet, SafeAreaView } from 'react-native';
 import { useStore } from '@/store';
-import { EmptyState } from '@/components/UI';
-import { COLORS, BATHROOM_ITEMS } from '@/constants';
+import { EmptyState, ScreenHeader } from '@/components/UI';
+import { COLORS, BATHROOM_ITEMS, RADIUS, SPACING } from '@/constants';
 import { WakeRecord } from '@/types';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isToday, isYesterday } from 'date-fns';
+
+function sectionLabel(dateStr: string): string {
+  const d = parseISO(dateStr);
+  if (isToday(d)) return 'Today';
+  if (isYesterday(d)) return 'Yesterday';
+  return format(d, 'EEEE, MMM d');
+}
 
 export function HistoryScreen() {
   const { records } = useStore();
@@ -28,13 +29,11 @@ export function HistoryScreen() {
   if (!records.length) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
-          <Text style={styles.title}>History</Text>
-        </View>
+        <ScreenHeader title="History" />
         <EmptyState
           emoji="📅"
           title="No history yet"
-          subtitle="Complete your first Bathroom Roulette challenge to see it here."
+          subtitle="Once you complete a Bathroom Roulette challenge, it'll show up here."
         />
       </SafeAreaView>
     );
@@ -42,10 +41,7 @@ export function HistoryScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <Text style={styles.title}>History</Text>
-        <Text style={styles.subtitle}>{records.length} completed</Text>
-      </View>
+      <ScreenHeader title="History" subtitle={`${records.length} challenge${records.length !== 1 ? 's' : ''} completed`} />
 
       <FlatList
         data={sections}
@@ -54,29 +50,23 @@ export function HistoryScreen() {
         showsVerticalScrollIndicator={false}
         renderItem={({ item: section }) => (
           <View style={styles.section}>
-            <Text style={styles.sectionDate}>
-              {format(parseISO(section.date), 'EEEE, MMM d')}
-            </Text>
+            <Text style={styles.sectionDate}>{sectionLabel(section.date)}</Text>
             {section.items.map((record, idx) => {
               const item = BATHROOM_ITEMS.find((i) => i.id === record.item);
               return (
                 <View key={idx} style={styles.recordCard}>
-                  <View style={styles.recordLeft}>
+                  <View style={styles.recordIconWrap}>
                     <Text style={styles.recordEmoji}>{item?.emoji ?? '🚿'}</Text>
-                    <View>
-                      <Text style={styles.recordItem}>{item?.label ?? record.item}</Text>
-                      <Text style={styles.recordTime}>
-                        {format(new Date(record.completedAt), 'h:mm a')}
-                      </Text>
-                    </View>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.recordItem}>{item?.label ?? record.item}</Text>
+                    <Text style={styles.recordTime}>{format(new Date(record.completedAt), 'h:mm a')}</Text>
                   </View>
                   <View style={styles.recordRight}>
                     <View style={styles.successBadge}>
                       <Text style={styles.successText}>✓</Text>
                     </View>
-                    <Text style={styles.minutesText}>
-                      {record.minutesToComplete}m
-                    </Text>
+                    <Text style={styles.minutesText}>{record.minutesToComplete}m</Text>
                   </View>
                 </View>
               );
@@ -91,24 +81,8 @@ export function HistoryScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: COLORS.textPrimary,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: COLORS.textMuted,
-    marginTop: 2,
-  },
-  list: { paddingHorizontal: 24, gap: 24 },
-  section: { gap: 10 },
+  list: { paddingHorizontal: SPACING.xxl, gap: SPACING.xxl },
+  section: { gap: SPACING.sm },
   sectionDate: {
     fontSize: 12,
     fontWeight: '700',
@@ -119,27 +93,34 @@ const styles = StyleSheet.create({
   },
   recordCard: {
     backgroundColor: COLORS.bgCard,
-    borderRadius: 14,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: 16,
+    padding: SPACING.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: SPACING.md,
   },
-  recordLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  recordEmoji: { fontSize: 28 },
+  recordIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.bgElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recordEmoji: { fontSize: 22 },
   recordItem: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   recordTime: { fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
   recordRight: { alignItems: 'flex-end', gap: 4 },
   successBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: COLORS.successDim,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  successText: { color: COLORS.success, fontSize: 14, fontWeight: '800' },
+  successText: { color: COLORS.success, fontSize: 13, fontWeight: '800' },
   minutesText: { fontSize: 12, color: COLORS.textMuted, fontWeight: '600' },
 });

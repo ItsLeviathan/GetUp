@@ -6,10 +6,9 @@ import {
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useStore } from '@/store';
-import { EmptyState } from '@/components/UI';
-import { COLORS, BATHROOM_ITEMS } from '@/constants';
+import { EmptyState, ScreenHeader, Card } from '@/components/UI';
+import { COLORS, BATHROOM_ITEMS, RADIUS, SPACING } from '@/constants';
 
 export function StatsScreen() {
   const { records, getStats } = useStore();
@@ -18,122 +17,108 @@ export function StatsScreen() {
   if (!records.length) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Stats</Text>
-        </View>
+        <ScreenHeader title="Stats" />
         <EmptyState
           emoji="📊"
-          title="No data yet"
-          subtitle="Complete at least one challenge to see your stats."
+          title="No stats yet"
+          subtitle="Complete your first Bathroom Roulette challenge to start tracking your wake-up stats."
         />
       </SafeAreaView>
     );
   }
 
-  // Most-seen items
+  const successRate = stats.totalCompleted > 0
+    ? Math.round((stats.totalCompleted / records.length) * 100)
+    : 0;
+
+  // Top 3 items seen
   const itemCounts = records.reduce<Record<string, number>>((acc, r) => {
     acc[r.item] = (acc[r.item] ?? 0) + 1;
     return acc;
   }, {});
   const topItems = Object.entries(itemCounts)
     .sort(([, a], [, b]) => b - a)
-    .slice(0, 5);
-
-  // Day-of-week breakdown
-  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const dayCounts = new Array(7).fill(0);
-  records.forEach((r) => {
-    const dow = new Date(r.completedAt).getDay();
-    dayCounts[dow]++;
-  });
-  const maxDay = Math.max(...dayCounts, 1);
+    .slice(0, 3)
+    .map(([id, count]) => ({
+      id,
+      count,
+      info: BATHROOM_ITEMS.find((i) => i.id === id),
+    }));
 
   return (
     <SafeAreaView style={styles.safe}>
+      <ScreenHeader title="Stats" subtitle="Your wake-up performance" />
+
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Stats</Text>
+        {/* Streak + rate row */}
+        <View style={styles.topRow}>
+          <Card style={styles.streakCard}>
+            <Text style={styles.streakFire}>🔥</Text>
+            <Text style={styles.bigNumber}>{stats.currentStreak}</Text>
+            <Text style={styles.bigLabel}>day streak</Text>
+            {stats.longestStreak > 0 && (
+              <Text style={styles.bestStreak}>Best: {stats.longestStreak}</Text>
+            )}
+          </Card>
+
+          <Card style={styles.rateCard}>
+            <View style={styles.rateRing}>
+              <Text style={styles.rateNumber}>{successRate}%</Text>
+            </View>
+            <Text style={styles.bigLabel}>success rate</Text>
+          </Card>
         </View>
 
-        {/* Streak hero */}
-        <LinearGradient
-          colors={['#1C1000', '#2D1A00']}
-          style={styles.streakHero}
-        >
-          <Text style={styles.streakEmoji}>🔥</Text>
-          <Text style={styles.streakNumber}>{stats.currentStreak}</Text>
-          <Text style={styles.streakLabel}>day streak</Text>
-          {stats.longestStreak > 0 && (
-            <Text style={styles.streakBest}>Best: {stats.longestStreak} days</Text>
-          )}
-        </LinearGradient>
-
-        {/* KPI grid */}
-        <View style={styles.kpiGrid}>
-          <StatBox
-            label="Total Completed"
-            value={stats.totalCompleted.toString()}
-            sub="challenges"
-            accent={COLORS.primary}
-          />
-          <StatBox
-            label="Avg Time"
-            value={stats.averageMinutes > 0 ? `${stats.averageMinutes}m` : '—'}
-            sub="to complete"
-            accent={COLORS.success}
-          />
-        </View>
-
-        {/* Day of week */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Activity by Day</Text>
-          <View style={styles.barChart}>
-            {dayLabels.map((label, i) => {
-              const height = Math.max(4, (dayCounts[i] / maxDay) * 80);
-              const isMax = dayCounts[i] === maxDay && maxDay > 0;
-              return (
-                <View key={i} style={styles.barCol}>
-                  <View style={styles.barTrack}>
-                    <View
-                      style={[
-                        styles.barFill,
-                        { height, backgroundColor: isMax ? COLORS.primary : COLORS.bgElevated },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.barLabel}>{label[0]}</Text>
-                  <Text style={styles.barCount}>{dayCounts[i]}</Text>
-                </View>
-              );
-            })}
-          </View>
+        {/* Summary row */}
+        <View style={styles.summaryRow}>
+          <Card style={styles.summaryCard}>
+            <Text style={styles.summaryNumber}>{records.length}</Text>
+            <Text style={styles.summaryLabel}>Total{'\n'}challenges</Text>
+          </Card>
+          <Card style={styles.summaryCard}>
+            <Text style={styles.summaryNumber}>{stats.averageMinutes}m</Text>
+            <Text style={styles.summaryLabel}>Avg wake-up{'\n'}time</Text>
+          </Card>
+          <Card style={styles.summaryCard}>
+            <Text style={styles.summaryNumber}>{stats.totalCompleted}</Text>
+            <Text style={styles.summaryLabel}>Missions{'\n'}complete</Text>
+          </Card>
         </View>
 
         {/* Top items */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Most Challenged Items</Text>
-          <View style={styles.itemsList}>
-            {topItems.map(([itemId, count], rank) => {
-              const item = BATHROOM_ITEMS.find((i) => i.id === itemId);
-              const pct = Math.round((count / records.length) * 100);
-              return (
-                <View key={itemId} style={styles.itemRow}>
-                  <Text style={styles.itemRank}>#{rank + 1}</Text>
-                  <Text style={styles.itemEmoji}>{item?.emoji ?? '🚿'}</Text>
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemName}>{item?.label ?? itemId}</Text>
-                    <View style={styles.progressTrack}>
-                      <View style={[styles.progressFill, { width: `${pct}%` }]} />
-                    </View>
+        {topItems.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Most Assigned Items</Text>
+            <Card style={styles.itemsCard}>
+              {topItems.map(({ id, count, info }, idx) => (
+                <View
+                  key={id}
+                  style={[styles.itemRow, idx < topItems.length - 1 && styles.itemRowBorder]}
+                >
+                  <View style={styles.itemRank}>
+                    <Text style={styles.itemRankText}>#{idx + 1}</Text>
                   </View>
-                  <Text style={styles.itemCount}>{count}×</Text>
+                  <View style={styles.itemEmojiWrap}>
+                    <Text style={styles.itemEmoji}>{info?.emoji ?? '🚿'}</Text>
+                  </View>
+                  <Text style={styles.itemName}>{info?.label ?? id}</Text>
+                  <View style={styles.itemCountWrap}>
+                    <Text style={styles.itemCount}>{count}×</Text>
+                  </View>
                 </View>
-              );
-            })}
+              ))}
+            </Card>
           </View>
+        )}
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            {stats.totalCompleted} mission{stats.totalCompleted !== 1 ? 's' : ''} completed
+            out of {records.length} challenge{records.length !== 1 ? 's' : ''}
+          </Text>
         </View>
 
         <View style={{ height: 100 }} />
@@ -142,91 +127,146 @@ export function StatsScreen() {
   );
 }
 
-function StatBox({
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-  accent: string;
-}) {
-  return (
-    <View style={[statStyles.box, { borderColor: accent + '33' }]}>
-      <Text style={[statStyles.value, { color: accent }]}>{value}</Text>
-      <Text style={statStyles.label}>{label}</Text>
-      <Text style={statStyles.sub}>{sub}</Text>
-    </View>
-  );
-}
-
-const statStyles = StyleSheet.create({
-  box: {
-    flex: 1,
-    backgroundColor: COLORS.bgCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    alignItems: 'center',
-    gap: 2,
-  },
-  value: { fontSize: 32, fontWeight: '800', letterSpacing: -1 },
-  label: { fontSize: 12, color: COLORS.textPrimary, fontWeight: '700', textAlign: 'center' },
-  sub: { fontSize: 11, color: COLORS.textMuted, textAlign: 'center' },
-});
-
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  scroll: { paddingHorizontal: 24, gap: 16 },
-  header: { paddingTop: 20, paddingBottom: 4 },
-  title: {
+  scroll: { paddingHorizontal: SPACING.xxl, gap: SPACING.lg },
+
+  topRow: { flexDirection: 'row', gap: SPACING.md },
+  streakCard: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 24,
+  },
+  streakFire: { fontSize: 32, marginBottom: 4 },
+  bigNumber: {
+    fontSize: 48,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    letterSpacing: -2,
+  },
+  bigLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  bestStreak: {
+    fontSize: 11,
+    color: COLORS.warning,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+
+  rateCard: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 24,
+  },
+  rateRing: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 4,
+    borderColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    backgroundColor: COLORS.primaryDim,
+  },
+  rateNumber: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: COLORS.primary,
+  },
+
+  summaryRow: { flexDirection: 'row', gap: SPACING.md },
+  summaryCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 18,
+    gap: 6,
+  },
+  summaryNumber: {
     fontSize: 28,
     fontWeight: '800',
     color: COLORS.textPrimary,
-    letterSpacing: -0.5,
+    letterSpacing: -1,
   },
-  streakHero: {
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.warning + '55',
-    padding: 28,
+  summaryLabel: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 15,
+  },
+
+  section: { gap: SPACING.sm },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: COLORS.textMuted,
+    marginLeft: 2,
+  },
+  itemsCard: { padding: 0, overflow: 'hidden' },
+  itemRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: SPACING.md,
+    padding: SPACING.lg,
   },
-  streakEmoji: { fontSize: 40, marginBottom: 4 },
-  streakNumber: { fontSize: 64, fontWeight: '800', color: COLORS.warning, letterSpacing: -2 },
-  streakLabel: { fontSize: 16, color: COLORS.textSecondary, fontWeight: '600' },
-  streakBest: { fontSize: 13, color: COLORS.textMuted, marginTop: 4 },
-  kpiGrid: { flexDirection: 'row', gap: 12 },
-  card: {
-    backgroundColor: COLORS.bgCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 20,
-    gap: 16,
+  itemRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  cardTitle: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, letterSpacing: 0.2 },
-  barChart: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  barCol: { alignItems: 'center', gap: 4, flex: 1 },
-  barTrack: { height: 80, justifyContent: 'flex-end', width: 28 },
-  barFill: { borderRadius: 6, width: '100%' },
-  barLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600' },
-  barCount: { fontSize: 10, color: COLORS.textMuted },
-  itemsList: { gap: 14 },
-  itemRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  itemRank: { fontSize: 12, color: COLORS.textMuted, width: 24, fontWeight: '700' },
-  itemEmoji: { fontSize: 22, width: 28 },
-  itemInfo: { flex: 1, gap: 4 },
-  itemName: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary },
-  progressTrack: {
-    height: 4,
+  itemRank: {
+    width: 28,
+    alignItems: 'center',
+  },
+  itemRankText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+  },
+  itemEmojiWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.sm,
     backgroundColor: COLORS.bgElevated,
-    borderRadius: 2,
-    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  progressFill: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 2 },
-  itemCount: { fontSize: 13, fontWeight: '700', color: COLORS.textMuted },
+  itemEmoji: { fontSize: 20 },
+  itemName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+  itemCountWrap: {
+    backgroundColor: COLORS.bgElevated,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  itemCount: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+  },
+
+  footer: {
+    alignItems: 'center',
+    paddingVertical: SPACING.lg,
+  },
+  footerText: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
 });
