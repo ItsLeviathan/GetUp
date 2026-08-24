@@ -55,8 +55,11 @@ export function StatsScreen() {
       >
         {/* Streak + rate row */}
         <View style={styles.topRow}>
-          <Card style={styles.streakCard}>
-            <Text style={styles.streakFire}>🔥</Text>
+          <Card
+            style={styles.streakCard}
+            accessibilityLabel={`${stats.currentStreak} day streak${stats.longestStreak > 0 ? `, best ${stats.longestStreak} days` : ''}`}
+          >
+            <Text style={styles.streakFire} importantForAccessibility="no">🔥</Text>
             <Text style={styles.bigNumber}>{stats.currentStreak}</Text>
             <Text style={styles.bigLabel}>day streak</Text>
             {stats.longestStreak > 0 && (
@@ -64,7 +67,7 @@ export function StatsScreen() {
             )}
           </Card>
 
-          <Card style={styles.rateCard}>
+          <Card style={styles.rateCard} accessibilityLabel={`${successRate} percent success rate`}>
             <View style={styles.rateRing}>
               <Text style={styles.rateNumber}>{successRate}%</Text>
             </View>
@@ -74,15 +77,15 @@ export function StatsScreen() {
 
         {/* Summary row */}
         <View style={styles.summaryRow}>
-          <Card style={styles.summaryCard}>
+          <Card style={styles.summaryCard} accessibilityLabel={`${records.length} total challenges`}>
             <Text style={styles.summaryNumber}>{records.length}</Text>
             <Text style={styles.summaryLabel}>Total{'\n'}challenges</Text>
           </Card>
-          <Card style={styles.summaryCard}>
+          <Card style={styles.summaryCard} accessibilityLabel={`${stats.averageMinutes} minute average wake up time`}>
             <Text style={styles.summaryNumber}>{stats.averageMinutes}m</Text>
             <Text style={styles.summaryLabel}>Avg wake-up{'\n'}time</Text>
           </Card>
-          <Card style={styles.summaryCard}>
+          <Card style={styles.summaryCard} accessibilityLabel={`${stats.totalCompleted} missions completed`}>
             <Text style={styles.summaryNumber}>{stats.totalCompleted}</Text>
             <Text style={styles.summaryLabel}>Missions{'\n'}complete</Text>
           </Card>
@@ -91,18 +94,20 @@ export function StatsScreen() {
         {/* Top items */}
         {topItems.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Most Assigned Items</Text>
+            <Text style={styles.sectionLabel} accessibilityRole="header">Most Assigned Items</Text>
             <Card style={styles.itemsCard}>
               {topItems.map(({ id, count, info }, idx) => (
                 <View
                   key={id}
                   style={[styles.itemRow, idx < topItems.length - 1 && styles.itemRowBorder]}
+                  accessible
+                  accessibilityLabel={`Rank ${idx + 1}: ${info?.label ?? id}, assigned ${count} time${count !== 1 ? 's' : ''}`}
                 >
                   <View style={styles.itemRank}>
                     <Text style={styles.itemRankText}>#{idx + 1}</Text>
                   </View>
                   <View style={styles.itemEmojiWrap}>
-                    <Text style={styles.itemEmoji}>{info?.emoji ?? '🚿'}</Text>
+                    <Text style={styles.itemEmoji} importantForAccessibility="no">{info?.emoji ?? '🚿'}</Text>
                   </View>
                   <Text style={styles.itemName}>{info?.label ?? id}</Text>
                   <View style={styles.itemCountWrap}>

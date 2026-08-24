@@ -2,6 +2,7 @@
   "expo": {
     "name": "GetUp",
     "slug": "getup",
+    "scheme": "getup",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",

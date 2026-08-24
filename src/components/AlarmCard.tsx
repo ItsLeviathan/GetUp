@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, Switch, TouchableOpacity, StyleSheet, Alert, Pressable } from 'react-native';
 import { Alarm } from '@/types';
-import { COLORS, RADIUS, SPACING } from '@/constants';
+import { COLORS, RADIUS, SPACING, TOUCH_TARGET } from '@/constants';
 import { useStore } from '@/store';
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const DAY_FULL_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const WEEKDAYS = [1, 2, 3, 4, 5];
 const WEEKEND = [0, 6];
 
@@ -41,6 +42,7 @@ export function AlarmCard({ alarm, onEdit }: Props) {
   const ampm = h >= 12 ? 'PM' : 'AM';
   const displayH = h % 12 || 12;
   const displayM = m.toString().padStart(2, '0');
+  const alarmName = alarm.label || `${displayH}:${displayM} ${ampm}`;
 
   return (
     <Pressable
@@ -52,11 +54,14 @@ export function AlarmCard({ alarm, onEdit }: Props) {
         !alarm.enabled && styles.cardDisabled,
         pressed && styles.cardPressed,
       ]}
+      accessibilityRole="button"
+      accessibilityLabel={`${alarmName} alarm, ${alarm.enabled ? describeDays(alarm.days) : 'off'}`}
+      accessibilityHint="Double tap to edit this alarm"
     >
       <View style={styles.top}>
         <View style={{ flex: 1 }}>
           {alarm.label ? <Text style={styles.label} numberOfLines={1}>{alarm.label}</Text> : null}
-          <View style={styles.timeRow}>
+          <View style={styles.timeRow} importantForAccessibility="no-hide-descendants">
             <Text style={[styles.time, !alarm.enabled && styles.timeDim]}>
               {displayH}:{displayM}
             </Text>
@@ -71,11 +76,13 @@ export function AlarmCard({ alarm, onEdit }: Props) {
           onValueChange={() => toggleAlarm(alarm.id)}
           trackColor={{ false: COLORS.bgElevated, true: COLORS.primaryDim }}
           thumbColor={alarm.enabled ? COLORS.primary : COLORS.textMuted}
+          accessibilityLabel={`${alarmName} alarm`}
+          accessibilityHint={alarm.enabled ? 'Double tap to turn off' : 'Double tap to turn on'}
         />
       </View>
 
       <View style={styles.bottom}>
-        <View style={styles.days}>
+        <View style={styles.days} importantForAccessibility="no-hide-descendants">
           {DAY_LABELS.map((d, i) => (
             <View key={i} style={[styles.day, alarm.days.includes(i) && styles.dayActive]}>
               <Text style={[styles.dayText, alarm.days.includes(i) && styles.dayTextActive]}>
@@ -86,15 +93,17 @@ export function AlarmCard({ alarm, onEdit }: Props) {
         </View>
 
         <View style={styles.actionsRow}>
-          <View style={styles.badge}>
+          <View style={styles.badge} importantForAccessibility="no-hide-descendants">
             <Text style={styles.badgeText}>🚿 Roulette</Text>
           </View>
           <TouchableOpacity
             onPress={confirmDelete}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={styles.deleteBtn}
+            accessibilityRole="button"
+            accessibilityLabel={`Delete ${alarmName} alarm`}
           >
-            <Text style={styles.deleteIcon}>🗑️</Text>
+            <Text style={styles.deleteIcon} importantForAccessibility="no">🗑️</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -204,14 +213,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   deleteBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: TOUCH_TARGET.min,
+    height: TOUCH_TARGET.min,
+    borderRadius: TOUCH_TARGET.min / 2,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.bgElevated,
   },
   deleteIcon: {
-    fontSize: 13,
+    fontSize: 15,
   },
 });

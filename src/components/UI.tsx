@@ -20,6 +20,7 @@ interface ButtonProps {
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
+  accessibilityHint?: string;
 }
 
 export function Button({
@@ -31,18 +32,27 @@ export function Button({
   loading,
   disabled,
   style,
+  accessibilityHint,
 }: ButtonProps) {
   const isCompact = size === 'md';
+  const a11yProps = {
+    accessibilityRole: 'button' as const,
+    accessibilityLabel: label,
+    accessibilityHint,
+    accessibilityState: { disabled: !!disabled || !!loading, busy: !!loading },
+  };
 
   if (variant === 'primary' || variant === 'success') {
+    // Both are bright fills now (volt / green) — always pair with dark text.
     const gradientColors: [string, string] =
-      variant === 'success' ? ['#2BA84A', '#22C55E'] : ['#FF7A40', '#FF5F1F'];
+      variant === 'success' ? ['#4DFFA9', '#1FE38A'] : ['#EAFF6B', '#D7FF3D'];
     return (
       <TouchableOpacity
         onPress={onPress}
         disabled={disabled || loading}
         style={[styles.btnWrap, disabled && styles.btnDisabled, style]}
         activeOpacity={0.85}
+        {...a11yProps}
       >
         <LinearGradient
           colors={gradientColors}
@@ -51,7 +61,7 @@ export function Button({
           style={[styles.btnPrimary, isCompact ? styles.btnPadMd : styles.btnPadLg]}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={COLORS.onPrimary} />
           ) : (
             <View style={styles.btnContent}>
               {icon ? <Text style={styles.btnIcon}>{icon}</Text> : null}
@@ -75,6 +85,7 @@ export function Button({
           style,
         ]}
         activeOpacity={0.75}
+        {...a11yProps}
       >
         <Text style={[styles.btnGhostText, { color: COLORS.danger }]}>{label}</Text>
       </TouchableOpacity>
@@ -87,6 +98,7 @@ export function Button({
       disabled={disabled || loading}
       style={[styles.btnGhost, isCompact ? styles.btnPadMd : styles.btnPadLg, style]}
       activeOpacity={0.75}
+      {...a11yProps}
     >
       <View style={styles.btnContent}>
         {icon ? <Text style={styles.btnIconGhost}>{icon}</Text> : null}
@@ -97,17 +109,16 @@ export function Button({
 }
 
 // ── IconBadge ─────────────────────────────────────────────────────────────────
-// A consistent round/soft container for an emoji or icon, used for list leading
-// icons, headers, and empty states so glyphs never float unanchored.
 interface IconBadgeProps {
   icon: string;
   size?: number;
   tint?: string;
   tintDim?: string;
   style?: ViewStyle;
+  label?: string;
 }
 
-export function IconBadge({ icon, size = 44, tint = COLORS.primary, tintDim, style }: IconBadgeProps) {
+export function IconBadge({ icon, size = 44, tint = COLORS.primary, tintDim, style, label }: IconBadgeProps) {
   return (
     <View
       style={[
@@ -120,6 +131,9 @@ export function IconBadge({ icon, size = 44, tint = COLORS.primary, tintDim, sty
         },
         style,
       ]}
+      accessible={!!label}
+      accessibilityLabel={label}
+      importantForAccessibility={label ? 'yes' : 'no-hide-descendants'}
     >
       <Text style={{ fontSize: size * 0.5 }}>{icon}</Text>
     </View>
@@ -131,12 +145,19 @@ interface CardProps {
   children: React.ReactNode;
   style?: ViewStyle;
   onPress?: () => void;
+  accessibilityLabel?: string;
 }
 
-export function Card({ children, style, onPress }: CardProps) {
+export function Card({ children, style, onPress, accessibilityLabel }: CardProps) {
   if (onPress) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={[styles.card, style]}>
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.8}
+        style={[styles.card, style]}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+      >
         {children}
       </TouchableOpacity>
     );
@@ -147,7 +168,7 @@ export function Card({ children, style, onPress }: CardProps) {
 // ── SectionLabel ──────────────────────────────────────────────────────────────
 export function SectionLabel({ text, hint }: { text: string; hint?: string }) {
   return (
-    <View style={styles.sectionLabelRow}>
+    <View style={styles.sectionLabelRow} accessibilityRole="header">
       <Text style={styles.sectionLabel}>{text}</Text>
       {hint ? <Text style={styles.sectionHint}>{hint}</Text> : null}
     </View>
@@ -155,8 +176,6 @@ export function SectionLabel({ text, hint }: { text: string; hint?: string }) {
 }
 
 // ── ScreenHeader ──────────────────────────────────────────────────────────────
-// Shared header so every tab (Alarms / History / Stats) reads as one app
-// instead of three differently-styled screens.
 interface ScreenHeaderProps {
   title: string;
   subtitle?: string;
@@ -167,7 +186,7 @@ export function ScreenHeader({ title, subtitle, right }: ScreenHeaderProps) {
   return (
     <View style={styles.screenHeader}>
       <View style={{ flex: 1 }}>
-        <Text style={styles.screenTitle}>{title}</Text>
+        <Text style={styles.screenTitle} accessibilityRole="header">{title}</Text>
         {subtitle ? <Text style={styles.screenSubtitle}>{subtitle}</Text> : null}
       </View>
       {right}
@@ -186,11 +205,11 @@ interface EmptyStateProps {
 export function EmptyState({ emoji, title, subtitle, action }: EmptyStateProps) {
   return (
     <View style={styles.emptyWrap}>
-      <View style={styles.emptyGlowWrap}>
+      <View style={styles.emptyGlowWrap} importantForAccessibility="no-hide-descendants">
         <View style={styles.emptyGlow} />
         <Text style={styles.emptyEmoji}>{emoji}</Text>
       </View>
-      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptyTitle} accessibilityRole="header">{title}</Text>
       <Text style={styles.emptySubtitle}>{subtitle}</Text>
       {action && <View style={styles.emptyAction}>{action}</View>}
     </View>
@@ -211,16 +230,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: RADIUS.md,
   },
-  btnPadMd: { paddingVertical: 16, paddingHorizontal: 24 },
-  btnPadLg: { paddingVertical: 19, paddingHorizontal: 28 },
+  btnPadMd: { paddingVertical: 16, paddingHorizontal: 24, minHeight: 44 },
+  btnPadLg: { paddingVertical: 19, paddingHorizontal: 28, minHeight: 48 },
   btnContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   btnIcon: { fontSize: 17 },
   btnIconGhost: { fontSize: 16 },
   btnPrimaryText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+    color: COLORS.onPrimary,
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
   btnGhost: {
     alignItems: 'center',
@@ -228,11 +248,14 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
+    minHeight: 44,
   },
   btnGhostText: {
     color: COLORS.textSecondary,
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   iconBadge: {
     alignItems: 'center',
@@ -273,15 +296,17 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.lg,
   },
   screenTitle: {
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 30,
+    fontWeight: '900',
     color: COLORS.textPrimary,
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
+    textTransform: 'uppercase',
   },
   screenSubtitle: {
     fontSize: 13,
     color: COLORS.textMuted,
-    marginTop: 2,
+    marginTop: 3,
+    fontWeight: '500',
   },
   emptyWrap: {
     flex: 1,
@@ -309,7 +334,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '800',
     color: COLORS.textPrimary,
     textAlign: 'center',
   },

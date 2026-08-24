@@ -1,13 +1,17 @@
 # File Tree: GetUp
 
-**Generated:** 6/29/2026, 7:49:45 PM
+**Generated:** 8/24/2026, 12:56:06 PM
 **Root Path:** `f:\GetUp`
 
 ```
 ├── .claude
 │   └── settings.json
 ├── GetUp
+│   └── package-lock.json
 ├── assets
+│   ├── android-icon-background.png
+│   ├── android-icon-foreground.png
+│   ├── android-icon-monochrome.png
 │   ├── favicon.png
 │   ├── icon.png
 │   └── splash-icon.png
@@ -38,6 +42,7 @@
 ├── AGENTS.md
 ├── App.tsx
 ├── CLAUDE.md
+├── GetUp-FileTree.md
 ├── LICENSE
 ├── app.json
 ├── babel.config.js

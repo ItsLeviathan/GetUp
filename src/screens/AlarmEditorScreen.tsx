@@ -21,6 +21,7 @@ import { scheduleAlarm } from '@/services/notifications';
 type Route = RouteProp<RootStackParamList, 'AlarmEditor'>;
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_FULL_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, i) => i);
 const ITEM_HEIGHT = 52;
@@ -121,16 +122,26 @@ export function AlarmEditorScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.navBar}>
-        <TouchableOpacity onPress={handleCancel} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity
+          onPress={handleCancel}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel"
+        >
           <Text style={styles.cancel}>Cancel</Text>
         </TouchableOpacity>
-        <Text style={styles.navTitle}>{editingId ? 'Edit Alarm' : 'New Alarm'}</Text>
+        <Text style={styles.navTitle} accessibilityRole="header">{editingId ? 'Edit Alarm' : 'New Alarm'}</Text>
         <View style={{ width: 60 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Time picker */}
-        <View style={styles.timePicker}>
+        <View
+          style={styles.timePicker}
+          accessible
+          accessibilityLabel={`Alarm time, ${displayHour12}:${pad(minute)} ${ampm}`}
+          accessibilityHint="Use the hour and minute wheels below to change the time"
+        >
           <View style={styles.timeWheelGroup}>
             <View style={styles.wheelSelectionBar} pointerEvents="none" />
 
@@ -143,6 +154,7 @@ export function AlarmEditorScreen() {
               contentContainerStyle={styles.wheelContent}
               contentOffset={{ x: 0, y: (hour % 12 || 12) === 12 ? 0 : (hour % 12) * ITEM_HEIGHT }}
               onMomentumScrollEnd={handleHourScrollEnd}
+              importantForAccessibility="no-hide-descendants"
             >
               {HOUR_OPTIONS.slice(0, 12).map((h) => {
                 const displayValue = h === 0 ? 12 : h;
@@ -177,6 +189,7 @@ export function AlarmEditorScreen() {
               contentContainerStyle={styles.wheelContent}
               contentOffset={{ x: 0, y: minute * ITEM_HEIGHT }}
               onMomentumScrollEnd={handleMinuteScrollEnd}
+              importantForAccessibility="no-hide-descendants"
             >
               {MINUTE_OPTIONS.map((m) => (
                 <TouchableOpacity
@@ -195,7 +208,7 @@ export function AlarmEditorScreen() {
               ))}
             </ScrollView>
 
-            <View style={styles.ampmGroup}>
+            <View style={styles.ampmGroup} importantForAccessibility="no-hide-descendants">
               {(['AM', 'PM'] as const).map((ap) => (
                 <TouchableOpacity
                   key={ap}
@@ -217,13 +230,28 @@ export function AlarmEditorScreen() {
         <View style={styles.section}>
           <SectionLabel text="Repeat" />
           <View style={styles.presetRow}>
-            <TouchableOpacity style={styles.presetChip} onPress={() => applyPreset([1, 2, 3, 4, 5])}>
+            <TouchableOpacity
+              style={styles.presetChip}
+              onPress={() => applyPreset([1, 2, 3, 4, 5])}
+              accessibilityRole="button"
+              accessibilityLabel="Set to weekdays"
+            >
               <Text style={styles.presetChipText}>Weekdays</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.presetChip} onPress={() => applyPreset([0, 6])}>
+            <TouchableOpacity
+              style={styles.presetChip}
+              onPress={() => applyPreset([0, 6])}
+              accessibilityRole="button"
+              accessibilityLabel="Set to weekends"
+            >
               <Text style={styles.presetChipText}>Weekends</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.presetChip} onPress={() => applyPreset([0, 1, 2, 3, 4, 5, 6])}>
+            <TouchableOpacity
+              style={styles.presetChip}
+              onPress={() => applyPreset([0, 1, 2, 3, 4, 5, 6])}
+              accessibilityRole="button"
+              accessibilityLabel="Set to every day"
+            >
               <Text style={styles.presetChipText}>Every day</Text>
             </TouchableOpacity>
           </View>
@@ -233,13 +261,18 @@ export function AlarmEditorScreen() {
                 key={i}
                 style={[styles.dayBtn, days.includes(i) && styles.dayBtnActive]}
                 onPress={() => toggleDay(i)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: days.includes(i) }}
+                accessibilityLabel={DAY_FULL_NAMES[i]}
               >
                 <Text style={[styles.dayBtnText, days.includes(i) && styles.dayBtnTextActive]}>{d}</Text>
               </TouchableOpacity>
             ))}
           </View>
           {!days.length && (
-            <Text style={styles.warnText}>Pick at least one day to save this alarm.</Text>
+            <Text style={styles.warnText} accessibilityLiveRegion="polite">
+              Pick at least one day to save this alarm.
+            </Text>
           )}
         </View>
 
@@ -256,6 +289,8 @@ export function AlarmEditorScreen() {
             placeholder="Morning mission..."
             placeholderTextColor={COLORS.textMuted}
             maxLength={40}
+            accessibilityLabel="Alarm label"
+            accessibilityHint="Optional name for this alarm"
           />
         </View>
 
@@ -263,7 +298,7 @@ export function AlarmEditorScreen() {
         <View style={styles.section}>
           <SectionLabel text="Challenge" />
           <View style={styles.challengeCard}>
-            <View style={styles.challengeEmojiWrap}>
+            <View style={styles.challengeEmojiWrap} importantForAccessibility="no-hide-descendants">
               <Text style={styles.challengeEmoji}>🚿</Text>
             </View>
             <View style={styles.challengeInfo}>
@@ -287,6 +322,9 @@ export function AlarmEditorScreen() {
                   setDirty(true);
                   setSoundId(s.id);
                 }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: soundId === s.id }}
+                accessibilityLabel={`${s.label} sound`}
               >
                 <Text style={[styles.soundText, soundId === s.id && styles.soundTextActive]}>
                   {s.label}
@@ -303,6 +341,7 @@ export function AlarmEditorScreen() {
           loading={saving}
           disabled={!days.length}
           size="lg"
+          accessibilityHint={!days.length ? 'Pick at least one day first' : undefined}
         />
         <View style={{ height: 60 }} />
       </ScrollView>
@@ -383,9 +422,11 @@ const styles = StyleSheet.create({
   dayBtn: {
     flex: 1,
     minWidth: 44,
+    minHeight: 44,
     paddingVertical: 12,
     borderRadius: RADIUS.sm,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: COLORS.bgCard,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -429,9 +470,11 @@ const styles = StyleSheet.create({
   soundRow: { flexDirection: 'row', gap: 10 },
   soundBtn: {
     flex: 1,
+    minHeight: 44,
     paddingVertical: 12,
     borderRadius: RADIUS.sm,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: COLORS.bgCard,
     borderWidth: 1,
     borderColor: COLORS.border,

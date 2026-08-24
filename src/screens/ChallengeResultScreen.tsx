@@ -8,6 +8,7 @@ import {
   Easing,
   TouchableOpacity,
   Alert,
+  AccessibilityInfo,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -35,13 +36,15 @@ export function ChallengeResultScreen() {
   useEffect(() => {
     if (success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      AccessibilityInfo.announceForAccessibility('Mission complete. Alarm stopped.');
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      AccessibilityInfo.announceForAccessibility('Not quite. That item did not match, try again.');
     }
 
     Animated.parallel([
-      Animated.spring(scaleAnim, { toValue: 1, friction: 6, tension: 80, useNativeDriver: true }),
-      Animated.timing(fadeAnim, { toValue: 1, duration: 400, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, friction: 5, tension: 90, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 350, easing: Easing.out(Easing.ease), useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -73,15 +76,18 @@ export function ChallengeResultScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <LinearGradient
-        colors={success ? ['#0A0E1A', '#0D1F14', '#0A0E1A'] : ['#0A0E1A', '#1A0E0E', '#0A0E1A']}
+        colors={success ? ['#050505', '#08150E', '#050505'] : ['#050505', '#180A0D', '#050505']}
         style={styles.bg}
       >
         <Animated.View style={[styles.center, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-          <View style={[styles.iconWrap, { backgroundColor: success ? COLORS.successDim : COLORS.dangerDim }]}>
+          <View style={[styles.iconWrap, { backgroundColor: success ? COLORS.successDim : COLORS.dangerDim }]} importantForAccessibility="no-hide-descendants">
             <Text style={styles.icon}>{success ? '✅' : '❌'}</Text>
           </View>
 
-          <Text style={[styles.headline, { color: success ? COLORS.success : COLORS.danger }]}>
+          <Text
+            style={[styles.headline, { color: success ? COLORS.success : COLORS.danger }]}
+            accessibilityRole="header"
+          >
             {success ? 'Mission Complete!' : 'Not Quite'}
           </Text>
 
@@ -109,8 +115,12 @@ export function ChallengeResultScreen() {
           )}
 
           {success && stats.currentStreak > 0 && (
-            <View style={styles.streakBanner}>
-              <Text style={styles.streakFire}>🔥</Text>
+            <View
+              style={styles.streakBanner}
+              accessible
+              accessibilityLabel={`${stats.currentStreak} day streak`}
+            >
+              <Text style={styles.streakFire} importantForAccessibility="no">🔥</Text>
               <Text style={styles.streakText}>{stats.currentStreak} day streak</Text>
             </View>
           )}
@@ -129,20 +139,33 @@ export function ChallengeResultScreen() {
                 style={styles.retryBtn}
                 onPress={() => navigation.replace('ChallengeCamera', { sessionId: 'active' })}
                 activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Try again"
               >
-                <LinearGradient colors={['#FF7A40', '#FF5F1F']} style={styles.retryGradient}>
+                <LinearGradient colors={['#FF6B85', '#FF3D5C']} style={styles.retryGradient}>
                   <Text style={styles.retryText}>Try Again</Text>
                 </LinearGradient>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleCantFind} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <TouchableOpacity
+                onPress={handleCantFind}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel="I can't find it"
+              >
                 <Text style={styles.cantFindLink}>I can't find it</Text>
               </TouchableOpacity>
             </>
           )}
 
           {success && (
-            <TouchableOpacity style={styles.doneBtnFull} onPress={handleDone} activeOpacity={0.85}>
-              <LinearGradient colors={['#1E7C3C', '#22C55E']} style={styles.doneBtnInner}>
+            <TouchableOpacity
+              style={styles.doneBtnFull}
+              onPress={handleDone}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Done"
+            >
+              <LinearGradient colors={['#4DFFA9', '#1FE38A']} style={styles.doneBtnInner}>
                 <Text style={styles.doneText}>Done</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -159,7 +182,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, gap: 20 },
   iconWrap: { width: 120, height: 120, borderRadius: 60, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   icon: { fontSize: 56 },
-  headline: { fontSize: 32, fontWeight: '800', letterSpacing: -0.5, textAlign: 'center' },
+  headline: { fontSize: 32, fontWeight: '900', letterSpacing: -0.5, textAlign: 'center', textTransform: 'uppercase' },
   summaryCard: {
     backgroundColor: COLORS.bgCard,
     borderRadius: RADIUS.lg,
@@ -176,22 +199,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#2D1A00',
+    backgroundColor: COLORS.primaryDim,
     borderRadius: RADIUS.md,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderWidth: 1,
-    borderColor: COLORS.warning,
+    borderColor: COLORS.primary,
   },
   streakFire: { fontSize: 22 },
-  streakText: { fontSize: 16, fontWeight: '700', color: COLORS.warning },
+  streakText: { fontSize: 16, fontWeight: '800', color: COLORS.primary },
   failDesc: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 20, maxWidth: 260 },
   bottomActions: { paddingHorizontal: 28, paddingBottom: 40, gap: 14, alignItems: 'center' },
   retryBtn: { borderRadius: RADIUS.lg, overflow: 'hidden', width: '100%' },
   retryGradient: { paddingVertical: 18, alignItems: 'center', borderRadius: RADIUS.lg },
-  retryText: { color: '#fff', fontSize: 17, fontWeight: '800' },
+  retryText: { color: '#fff', fontSize: 17, fontWeight: '800', letterSpacing: 0.3, textTransform: 'uppercase' },
   cantFindLink: { color: COLORS.textMuted, fontSize: 13, fontWeight: '600', textDecorationLine: 'underline' },
   doneBtnFull: { borderRadius: RADIUS.lg, overflow: 'hidden', width: '100%' },
   doneBtnInner: { paddingVertical: 16, alignItems: 'center', borderRadius: RADIUS.lg },
-  doneText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  doneText: { color: COLORS.onPrimary, fontSize: 16, fontWeight: '800', letterSpacing: 0.3, textTransform: 'uppercase' },
 });

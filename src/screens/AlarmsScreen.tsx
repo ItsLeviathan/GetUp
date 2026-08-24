@@ -36,9 +36,11 @@ export function AlarmsScreen() {
             onPress={() => navigation.navigate('AlarmEditor', {})}
             activeOpacity={0.8}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            accessibilityRole="button"
+            accessibilityLabel="Add new alarm"
           >
-            <LinearGradient colors={['#FF7A40', '#FF5F1F']} style={styles.addBtnGradient}>
-              <Text style={styles.addBtnText}>+</Text>
+            <LinearGradient colors={['#EAFF6B', '#D7FF3D']} style={styles.addBtnGradient}>
+              <Text style={styles.addBtnText} importantForAccessibility="no">+</Text>
             </LinearGradient>
           </TouchableOpacity>
         }
@@ -54,8 +56,10 @@ export function AlarmsScreen() {
               style={styles.emptyAddBtnWrap}
               onPress={() => navigation.navigate('AlarmEditor', {})}
               activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Set your first alarm"
             >
-              <LinearGradient colors={['#FF7A40', '#FF5F1F']} style={styles.emptyAddBtn}>
+              <LinearGradient colors={['#EAFF6B', '#D7FF3D']} style={styles.emptyAddBtn}>
                 <Text style={styles.emptyAddText}>Set your first alarm</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -66,7 +70,7 @@ export function AlarmsScreen() {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.sectionLabel}>
+          <Text style={styles.sectionLabel} accessibilityRole="header">
             {activeCount} active alarm{activeCount !== 1 ? 's' : ''}
           </Text>
           {sorted.map((alarm) => (
@@ -101,8 +105,8 @@ const styles = StyleSheet.create({
   },
   addBtnText: {
     fontSize: 28,
-    color: '#fff',
-    fontWeight: '300',
+    color: COLORS.onPrimary,
+    fontWeight: '600',
     lineHeight: 32,
   },
   list: {
@@ -131,8 +135,10 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
   },
   emptyAddText: {
-    color: '#fff',
+    color: COLORS.onPrimary,
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
 });

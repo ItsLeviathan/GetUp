@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Animated,
   Easing,
   TouchableOpacity,
+  AccessibilityInfo,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -25,58 +26,78 @@ export function ActiveChallengeScreen() {
   // Pulse animation on the emoji
   const pulse = useRef(new Animated.Value(1)).current;
   const glow = useRef(new Animated.Value(0)).current;
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
-    Animated.loop(
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (mounted) setReduceMotion(enabled);
+    });
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => {
+      mounted = false;
+      sub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (reduceMotion) return;
+
+    const pulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, {
-          toValue: 1.12,
-          duration: 700,
-          easing: Easing.inOut(Easing.ease),
+          toValue: 1.16,
+          duration: 550,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(pulse, {
           toValue: 1,
-          duration: 700,
+          duration: 550,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ])
-    ).start();
-
-    Animated.loop(
+    );
+    const glowLoop = Animated.loop(
       Animated.sequence([
-        Animated.timing(glow, { toValue: 1, duration: 1000, useNativeDriver: true }),
-        Animated.timing(glow, { toValue: 0, duration: 1000, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0, duration: 800, useNativeDriver: true }),
       ])
-    ).start();
-  }, []);
+    );
+    pulseLoop.start();
+    glowLoop.start();
+    return () => {
+      pulseLoop.stop();
+      glowLoop.stop();
+    };
+  }, [reduceMotion]);
 
   if (!activeSession) {
     return null;
   }
 
-  const glowOpacity = glow.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.8] });
+  const glowOpacity = glow.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.85] });
 
   return (
     <SafeAreaView style={styles.safe}>
       <LinearGradient
-        colors={['#0A0E1A', '#0F1728', '#0A0E1A']}
+        colors={['#050505', '#0F0608', '#050505']}
         style={styles.bg}
       >
-        {/* Alert header */}
+        {/* Alert header — coral marks the urgent/live state */}
         <View style={styles.alertBanner}>
           <Text style={styles.alertText}>🚨  ALARM ACTIVE  🚨</Text>
         </View>
 
         {/* Challenge card */}
         <View style={styles.center}>
-          <Text style={styles.missionLabel}>YOUR MISSION</Text>
+          <Text style={styles.missionLabel} accessibilityRole="header">YOUR MISSION</Text>
 
-          {/* Glowing orb behind emoji */}
-          <View style={styles.emojiWrap}>
-            <Animated.View style={[styles.glowOrb, { opacity: glowOpacity }]} />
-            <Animated.Text style={[styles.itemEmoji, { transform: [{ scale: pulse }] }]}>
+          {/* Glowing volt orb behind emoji — target-lock energy */}
+          <View style={styles.emojiWrap} importantForAccessibility="no-hide-descendants">
+            <Animated.View style={[styles.glowOrb, { opacity: reduceMotion ? 0.5 : glowOpacity }]} />
+            <Animated.Text style={[styles.itemEmoji, { transform: [{ scale: reduceMotion ? 1 : pulse }] }]}>
               {activeSession.itemEmoji}
             </Animated.Text>
           </View>
@@ -93,14 +114,17 @@ export function ActiveChallengeScreen() {
             style={styles.cameraBtn}
             onPress={() => navigation.navigate('ChallengeCamera', { sessionId: 'active' })}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Open camera"
+            accessibilityHint={`Take a photo of the ${activeSession.itemLabel.toLowerCase()} to stop the alarm`}
           >
             <LinearGradient
-              colors={['#FF7A40', '#FF5F1F', '#E04A10']}
+              colors={['#EAFF6B', '#D7FF3D', '#B9E600']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.cameraBtnGradient}
             >
-              <Text style={styles.cameraBtnIcon}>📷</Text>
+              <Text style={styles.cameraBtnIcon} importantForAccessibility="no">📷</Text>
               <Text style={styles.cameraBtnText}>Open Camera</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -115,7 +139,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   bg: { flex: 1 },
   alertBanner: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.secondary,
     paddingVertical: 10,
     alignItems: 'center',
   },
@@ -157,11 +181,12 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   itemLabel: {
-    fontSize: 36,
-    fontWeight: '800',
+    fontSize: 34,
+    fontWeight: '900',
     color: COLORS.textPrimary,
     letterSpacing: -0.5,
     textAlign: 'center',
+    textTransform: 'uppercase',
   },
   instruction: {
     fontSize: 15,
@@ -182,8 +207,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
+    shadowOpacity: 0.55,
+    shadowRadius: 22,
     elevation: 10,
   },
   cameraBtnGradient: {
@@ -196,10 +221,11 @@ const styles = StyleSheet.create({
   },
   cameraBtnIcon: { fontSize: 22 },
   cameraBtnText: {
-    color: '#fff',
+    color: COLORS.onPrimary,
     fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 0.3,
+    fontWeight: '900',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   hint: {
     fontSize: 12,

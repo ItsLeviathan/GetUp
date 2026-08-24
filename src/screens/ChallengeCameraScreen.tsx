@@ -30,8 +30,6 @@ export function ChallengeCameraScreen() {
   const [attemptFeedback, setAttemptFeedback] = useState<string | null>(null);
   const [shutterPressed, setShutterPressed] = useState(false);
 
-  // Auto-clear stale feedback after a few seconds so the HUD doesn't stay
-  // cluttered with an old failed attempt forever.
   useEffect(() => {
     if (!attemptFeedback) return;
     const t = setTimeout(() => setAttemptFeedback(null), 6000);
@@ -90,17 +88,23 @@ export function ChallengeCameraScreen() {
     const canAskAgain = permission.canAskAgain;
     return (
       <SafeAreaView style={styles.permissionScreen}>
-        <View style={styles.permissionIconWrap}>
+        <View style={styles.permissionIconWrap} importantForAccessibility="no-hide-descendants">
           <Text style={styles.permissionEmoji}>📷</Text>
         </View>
-        <Text style={styles.permissionTitle}>Camera access needed</Text>
+        <Text style={styles.permissionTitle} accessibilityRole="header">Camera access needed</Text>
         <Text style={styles.permissionDesc}>
           GetUp needs your camera to verify the Bathroom Roulette challenge. Photos are checked
           on-device for the item and never saved or shared.
         </Text>
 
         {canAskAgain ? (
-          <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={styles.permissionBtn}
+            onPress={requestPermission}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Allow camera access"
+          >
             <Text style={styles.permissionBtnText}>Allow Camera</Text>
           </TouchableOpacity>
         ) : (
@@ -110,6 +114,8 @@ export function ChallengeCameraScreen() {
               Platform.OS === 'ios' ? Linking.openURL('app-settings:') : Linking.openSettings()
             }
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Open device settings"
           >
             <Text style={styles.permissionBtnText}>Open Settings</Text>
           </TouchableOpacity>
@@ -119,6 +125,8 @@ export function ChallengeCameraScreen() {
           onPress={() => navigation.goBack()}
           style={styles.permissionBack}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
         >
           <Text style={styles.permissionBackText}>Go back</Text>
         </TouchableOpacity>
@@ -134,14 +142,18 @@ export function ChallengeCameraScreen() {
         <SafeAreaView style={styles.overlay}>
           {/* Top HUD */}
           <View style={styles.hud}>
-            <View style={styles.targetBadge}>
-              <Text style={styles.targetEmoji}>{activeSession.itemEmoji}</Text>
+            <View
+              style={styles.targetBadge}
+              accessible
+              accessibilityLabel={`Find and photograph the ${activeSession.itemLabel.toLowerCase()}`}
+            >
+              <Text style={styles.targetEmoji} importantForAccessibility="no">{activeSession.itemEmoji}</Text>
               <Text style={styles.targetLabel}>Find: {activeSession.itemLabel}</Text>
             </View>
           </View>
 
           {/* Scan frame */}
-          <View style={styles.frameWrap}>
+          <View style={styles.frameWrap} importantForAccessibility="no-hide-descendants">
             <View style={styles.frame}>
               <View style={[styles.corner, styles.cornerTL]} />
               <View style={[styles.corner, styles.cornerTR]} />
@@ -156,13 +168,17 @@ export function ChallengeCameraScreen() {
           {/* Bottom controls */}
           <View style={styles.controls}>
             {attemptFeedback && (
-              <View style={styles.feedbackBanner}>
+              <View
+                style={styles.feedbackBanner}
+                accessibilityLiveRegion="assertive"
+                accessible
+              >
                 <Text style={styles.feedbackText}>❌  {attemptFeedback}</Text>
               </View>
             )}
 
             {verifying ? (
-              <View style={styles.verifyingWrap}>
+              <View style={styles.verifyingWrap} accessibilityLiveRegion="polite" accessible>
                 <ActivityIndicator color={COLORS.primary} size="large" />
                 <Text style={styles.verifyingText}>Checking your photo...</Text>
               </View>
@@ -173,6 +189,9 @@ export function ChallengeCameraScreen() {
                 onPressIn={() => setShutterPressed(true)}
                 onPressOut={() => setShutterPressed(false)}
                 activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Take photo"
+                accessibilityHint={`Captures a photo to verify the ${activeSession.itemLabel.toLowerCase()}`}
               >
                 <View style={[styles.shutterRing, shutterPressed && styles.shutterRingPressed]}>
                   <View style={[styles.shutterBtn, shutterPressed && styles.shutterBtnPressed]} />
@@ -181,7 +200,12 @@ export function ChallengeCameraScreen() {
             )}
 
             {!verifying && (
-              <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel and go back"
+              >
                 <Text style={styles.cancelLink}>Cancel</Text>
               </TouchableOpacity>
             )}
@@ -211,7 +235,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.pill,
     paddingVertical: 10,
     paddingHorizontal: 18,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.primary,
   },
   targetEmoji: { fontSize: 20 },
@@ -241,7 +265,7 @@ const styles = StyleSheet.create({
 
   controls: { paddingBottom: 36, alignItems: 'center', gap: 16 },
   feedbackBanner: {
-    backgroundColor: 'rgba(239,68,68,0.9)',
+    backgroundColor: 'rgba(255, 61, 92, 0.92)',
     borderRadius: RADIUS.sm,
     paddingVertical: 10,
     paddingHorizontal: 20,
@@ -308,7 +332,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 32,
   },
-  permissionBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  permissionBtnText: { color: COLORS.onPrimary, fontSize: 16, fontWeight: '800', letterSpacing: 0.3, textTransform: 'uppercase' },
   permissionBack: { marginTop: 4, padding: 8 },
   permissionBackText: { color: COLORS.textMuted, fontSize: 14, fontWeight: '600' },
 });

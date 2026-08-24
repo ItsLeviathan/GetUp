@@ -50,21 +50,27 @@ export function HistoryScreen() {
         showsVerticalScrollIndicator={false}
         renderItem={({ item: section }) => (
           <View style={styles.section}>
-            <Text style={styles.sectionDate}>{sectionLabel(section.date)}</Text>
+            <Text style={styles.sectionDate} accessibilityRole="header">{sectionLabel(section.date)}</Text>
             {section.items.map((record, idx) => {
               const item = BATHROOM_ITEMS.find((i) => i.id === record.item);
+              const timeLabel = format(new Date(record.completedAt), 'h:mm a');
               return (
-                <View key={idx} style={styles.recordCard}>
+                <View
+                  key={idx}
+                  style={styles.recordCard}
+                  accessible
+                  accessibilityLabel={`${item?.label ?? record.item}, completed at ${timeLabel}, took ${record.minutesToComplete} minute${record.minutesToComplete !== 1 ? 's' : ''}`}
+                >
                   <View style={styles.recordIconWrap}>
-                    <Text style={styles.recordEmoji}>{item?.emoji ?? '🚿'}</Text>
+                    <Text style={styles.recordEmoji} importantForAccessibility="no">{item?.emoji ?? '🚿'}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.recordItem}>{item?.label ?? record.item}</Text>
-                    <Text style={styles.recordTime}>{format(new Date(record.completedAt), 'h:mm a')}</Text>
+                    <Text style={styles.recordTime}>{timeLabel}</Text>
                   </View>
                   <View style={styles.recordRight}>
                     <View style={styles.successBadge}>
-                      <Text style={styles.successText}>✓</Text>
+                      <Text style={styles.successText} importantForAccessibility="no">✓</Text>
                     </View>
                     <Text style={styles.minutesText}>{record.minutesToComplete}m</Text>
                   </View>

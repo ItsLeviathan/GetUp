@@ -26,7 +26,7 @@ export async function requestNotificationPermissions(): Promise<boolean> {
       name: 'Alarms',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
-      sound: 'true',
+      sound: 'default',
       bypassDnd: true,
     });
   }
@@ -45,7 +45,7 @@ export async function scheduleAlarm(alarm: Alarm): Promise<void> {
       content: {
         title: '🚨 GetUp — Mission Time',
         body: `${alarm.label || 'Wake up!'} · Bathroom Roulette awaits`,
-        sound: 'true',
+        sound: true,
         data: { alarmId: alarm.id, type: 'alarm' },
       },
       trigger: {
